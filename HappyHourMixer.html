@@ -1,0 +1,710 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Happy Hour Mixer</title>
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: #f0f4ff;
+      color: #1a1a2e;
+      min-height: 100vh;
+    }
+
+    header {
+      background: linear-gradient(135deg, #6c63ff, #48b6e8);
+      color: white;
+      padding: 24px 20px 20px;
+      text-align: center;
+    }
+    header h1 { font-size: 1.7rem; font-weight: 700; letter-spacing: -0.5px; }
+    header p { font-size: 0.9rem; opacity: 0.85; margin-top: 4px; }
+
+    #stats-bar {
+      background: rgba(255,255,255,0.15);
+      margin-top: 14px;
+      border-radius: 20px;
+      padding: 6px 16px;
+      display: inline-block;
+      font-size: 0.85rem;
+    }
+
+    main { padding: 20px 16px 100px; max-width: 600px; margin: 0 auto; }
+
+    /* FAB Button */
+    #add-btn {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: linear-gradient(135deg, #6c63ff, #48b6e8);
+      color: white;
+      border: none;
+      border-radius: 50px;
+      padding: 16px 24px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      box-shadow: 0 4px 20px rgba(108, 99, 255, 0.4);
+      z-index: 100;
+      transition: transform 0.15s, box-shadow 0.15s;
+    }
+    #add-btn:active { transform: scale(0.96); box-shadow: 0 2px 10px rgba(108,99,255,0.3); }
+
+    /* Instructions */
+    #instructions {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      border-left: 4px solid #48b6e8;
+    }
+    #challenge-text {
+      font-size: 0.95rem;
+      font-weight: 600;
+      color: #1a1a2e;
+      line-height: 1.5;
+      margin-bottom: 10px;
+    }
+    #disclaimer-text {
+      font-size: 0.78rem;
+      color: #999;
+      line-height: 1.4;
+    }
+
+    /* Empty state */
+    #empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: #888;
+    }
+    #empty-state .icon { font-size: 3rem; margin-bottom: 12px; }
+    #empty-state h2 { font-size: 1.2rem; color: #555; margin-bottom: 8px; }
+    #empty-state p { font-size: 0.9rem; }
+
+    /* People grid */
+    #people-list { display: flex; flex-direction: column; gap: 14px; }
+
+    .person-card {
+      background: white;
+      border-radius: 16px;
+      padding: 18px;
+      box-shadow: 0 2px 12px rgba(0,0,0,0.07);
+      border-left: 4px solid #6c63ff;
+      transition: transform 0.15s;
+    }
+    .person-card:active { transform: scale(0.99); }
+
+    .person-card .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+    }
+    .person-card .name { font-size: 1.1rem; font-weight: 700; color: #1a1a2e; }
+    .person-card .level-badge {
+      background: #ede9ff;
+      color: #6c63ff;
+      font-size: 0.75rem;
+      font-weight: 600;
+      padding: 3px 10px;
+      border-radius: 20px;
+      white-space: nowrap;
+      margin-left: 8px;
+    }
+    .person-card .project {
+      font-size: 0.85rem;
+      color: #666;
+      margin-top: 4px;
+    }
+    .person-card .question-block {
+      margin-top: 12px;
+      background: #f7f8ff;
+      border-radius: 10px;
+      padding: 12px;
+    }
+    .person-card .question-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      color: #6c63ff;
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+    .person-card .question-text {
+      font-size: 0.85rem;
+      color: #444;
+      font-style: italic;
+      margin-bottom: 6px;
+    }
+    .person-card .answer-text {
+      font-size: 0.9rem;
+      color: #1a1a2e;
+    }
+    .card-actions { margin-top: 12px; display: flex; justify-content: flex-end; }
+    .delete-btn {
+      background: none;
+      border: none;
+      color: #ccc;
+      font-size: 0.8rem;
+      cursor: pointer;
+      padding: 4px 8px;
+    }
+    .delete-btn:hover { color: #e74c3c; }
+
+    /* Modal overlay */
+    #modal-overlay {
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 200;
+      align-items: flex-end;
+      justify-content: center;
+    }
+    #modal-overlay.open { display: flex; }
+
+    #modal {
+      background: white;
+      width: 100%;
+      max-width: 600px;
+      border-radius: 24px 24px 0 0;
+      padding: 24px 20px 40px;
+      max-height: 92vh;
+      overflow-y: auto;
+      animation: slideUp 0.25s ease;
+    }
+    @keyframes slideUp {
+      from { transform: translateY(100%); }
+      to { transform: translateY(0); }
+    }
+
+    .modal-handle {
+      width: 40px; height: 4px;
+      background: #ddd; border-radius: 4px;
+      margin: 0 auto 20px;
+    }
+
+    #modal h2 { font-size: 1.2rem; font-weight: 700; margin-bottom: 6px; }
+
+    /* Question display */
+    #question-display {
+      background: linear-gradient(135deg, #6c63ff, #48b6e8);
+      color: white;
+      border-radius: 14px;
+      padding: 16px;
+      margin-bottom: 20px;
+      position: relative;
+    }
+    #question-display .q-label {
+      font-size: 0.72rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      opacity: 0.8;
+      margin-bottom: 6px;
+    }
+    #question-display .q-text {
+      font-size: 1rem;
+      font-weight: 600;
+      line-height: 1.4;
+    }
+    #reroll-btn {
+      margin-top: 10px;
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 20px;
+      cursor: pointer;
+    }
+    #reroll-btn:active { background: rgba(255,255,255,0.35); }
+
+    /* Form */
+    .form-group { margin-bottom: 16px; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: #555; margin-bottom: 6px; }
+    input, textarea {
+      width: 100%;
+      border: 2px solid #e8e8f0;
+      border-radius: 10px;
+      padding: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      color: #1a1a2e;
+      transition: border-color 0.15s;
+      outline: none;
+      background: #fafafa;
+    }
+    input:focus, textarea:focus { border-color: #6c63ff; background: white; }
+    textarea { resize: vertical; min-height: 80px; }
+
+    .save-btn {
+      width: 100%;
+      background: linear-gradient(135deg, #6c63ff, #48b6e8);
+      color: white;
+      border: none;
+      border-radius: 12px;
+      padding: 16px;
+      font-size: 1rem;
+      font-weight: 700;
+      cursor: pointer;
+      margin-top: 4px;
+      transition: opacity 0.15s;
+    }
+    .save-btn:active { opacity: 0.85; }
+
+    .cancel-btn {
+      width: 100%;
+      background: none;
+      border: 2px solid #e8e8f0;
+      color: #888;
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+
+    /* Section header */
+    .section-header {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: #999;
+      font-weight: 600;
+      margin-bottom: 14px;
+    }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>Happy Hour Mixer</h1>
+  <p>Meet new people. Ask great questions.</p>
+  <div id="stats-bar"><span id="count">0</span> people met</div>
+</header>
+
+<main>
+  <div id="instructions">
+    <p id="challenge-text">Reinvention Partner Leads are challenged to speak with at least one person at every level. The Partner Lead that meets the most new people wins!</p>
+    <p id="disclaimer-text">Your entries will be saved locally, but only you will have access to view what you have recorded.</p>
+  </div>
+
+  <div id="empty-state">
+    <div class="icon">&#127867;</div>
+    <h2>Ready to mix?</h2>
+    <p>Tap the button below to add someone new you just met.</p>
+  </div>
+  <div class="section-header" id="list-label" style="display:none;">People You've Met</div>
+  <div id="people-list"></div>
+</main>
+
+<button id="add-btn">+ Add Person</button>
+
+<!-- Modal -->
+<div id="modal-overlay">
+  <div id="modal">
+    <div class="modal-handle"></div>
+    <h2>New Connection</h2>
+    <p style="font-size:0.85rem;color:#888;margin-bottom:16px;">Ask them this question, then fill in the details.</p>
+
+    <div id="question-display">
+      <div class="q-label">Your Question to Ask</div>
+      <div class="q-text" id="current-question"></div>
+      <button id="reroll-btn">New question</button>
+    </div>
+
+    <div class="form-group">
+      <label>Their Name</label>
+      <input type="text" id="input-name" placeholder="e.g. Sarah" />
+    </div>
+    <div class="form-group">
+      <label>Their Level</label>
+      <input type="text" id="input-level" placeholder="e.g. Senior Manager, Director..." />
+    </div>
+    <div class="form-group">
+      <label>Their Project</label>
+      <input type="text" id="input-project" placeholder="e.g. FDA submission, Phase 3 trial..." />
+    </div>
+    <div class="form-group">
+      <label>Their Answer</label>
+      <textarea id="input-answer" placeholder="What did they say?"></textarea>
+    </div>
+
+    <button class="save-btn" id="save-btn">Save Connection</button>
+    <button class="cancel-btn" id="cancel-btn">Cancel</button>
+  </div>
+</div>
+
+<script>
+  const QUESTIONS = [
+    "One thing that influences how you live your life everyday",
+    "What are you searching for most in your life",
+    "Name a time you were most disappointed in yourself",
+    "Besides family, who do you think you can be most vulnerable with",
+    "Biggest lesson you've learned in college",
+    "What makes you write someone off",
+    "What are qualities that you strive to achieve for yourself",
+    "How do you think you are perceived",
+    "Who of your friends do you think you will still be in close contact with in 20 years",
+    "Who are you closer with, mom or dad?",
+    "What is one thing you wished people noticed about you or asked you about?",
+    "What's your favorite piece of clothing that you own or have ever owned?",
+    "What movie setting would you love to live in?",
+    "What small things make your day better?",
+    "Who has impressed you most with what they have accomplished?",
+    "What's your claim to fame?",
+    "What's something you like to do the old fashioned way",
+    "Favorite genre for a book and a movie",
+    "How often do you people watch?",
+    "What's the best single day on the calendar?",
+    "What are you interested in that most people haven't heard of?",
+    "How do you relax after a long day?",
+    "What is the most annoying question people ask you?",
+    "What could you give a 40 minute presentation on with zero preparation?",
+    "What should everyone do at least once in their lives?",
+    "What is something that a ton of people are obsessed with but you just don't get the point of?",
+    "What's something you've been meaning to try but just haven't gotten around to it?",
+    "How has your life changed in one year?",
+    "What is something that you would rate 10/10?",
+    "What do you hope never changes?",
+    "What website do you visit most?",
+    "What is special about the place you grew up?",
+    "What are some events that have made you into who you are?",
+    "What dumb accomplishment are you most proud of?",
+    "What are you addicted to?",
+    "What stereotype do you completely live up to?",
+    "As you get older, what are you becoming more and more afraid of?",
+    "Favorite smell",
+    "Who is / was your most interesting friend?",
+    "What do you take for granted?",
+    "What's something you are self-conscious about?",
+    "When do you feel truly alive?",
+    "What are you really good at, but kind of embarrassed that you are good at it?",
+    "Which of your scars has the best story behind it?",
+    "What's the hardest lesson you've learned?",
+    "What do people think is weird about you?",
+    "What annoys you most about the in-groups you are a part of?",
+    "What are some of your personal rules that you never break?",
+    "Why do you matter?",
+    "What do you regret not doing or starting when you were younger?",
+    "What keeps you up at night?",
+    "What's the most illegal thing you've done?",
+    "What lie do you tell most often?",
+    "What do you most often look down on people for? What do you think other people look down on you for?",
+    "What bridges do you not regret burning?",
+    "What are you afraid people see when they look at you?",
+    "When do you think a person is ready for marriage?",
+    "What kind of parent do you think you will be?",
+    "Who is that one person you can talk to about just anything?",
+    "What is the weirdest thing about you?",
+    "What is the closest you've ever come to being arrested?",
+    "If you could have anybody else's life, whose would you take?",
+    "What would you consider to be your deepest fear?",
+    "What do you do or where do you go when you need to be alone?",
+    "Have you ever been in love? Tell me about it.",
+    "Why did you cry the last time you did so?",
+    "When have you caused the most harm to yourself?",
+    "What has been the biggest change you ever made that made you the most proud of yourself",
+    "What is something you've learned that nobody told you?",
+    "If you could be anywhere other than where you are right now, where would you be and what would you be looking at?",
+    "What is your most cherished childhood memory?",
+    "If you could have the option of eradicating pain from your life would you choose to do so? Why or why not?",
+    "How do you define beauty?",
+    "Where does happiness come from? Define what happiness means to you.",
+    "What was your father or mother like at home? How do they act different outside of family?",
+    "If you had to pick one, what is the most important value you would teach your children — Honesty, Kindness, or Courage?",
+    "What trait do you envy in others?",
+    "What skill do you wish you had?",
+    "How do you wish to be remembered?",
+    "How would your best friend describe you in five words?",
+    "How would you summarize your life as a purpose?",
+    "Would you want to be famous?",
+    "Drink of choice?",
+    "Favorite feature about yourself?",
+    "What do you admire most in a person?",
+    "Least favorite feature about yourself?",
+    "What is a time that you embarrassed yourself in front of someone that you liked?",
+    "When is the last time that you sang?",
+    "Do you shower at night or in the morning?",
+    "When is the last time that you felt guilty?",
+    "When is the last time that you apologized to someone?",
+    "What is your favorite seat in the car?",
+    "What's something that you love but that you don't like to buy for yourself?",
+    "What's the most scared that you've ever been in your life?",
+    "If you were arrested, who would you call?",
+    "What is your greatest challenge and how did you overcome it?",
+    "What is your favorite tradition?",
+    "What does Christmas look like in your family?",
+    "When was the last time that you got into an argument with your parents?",
+    "How do you grieve?",
+    "How do your parents show emotions?",
+    "What was the first concert that you attended?",
+    "Do you like sushi?",
+    "What are your love languages?",
+    "How much do you tip in restaurants?",
+    "How do you obtain happiness?",
+    "What do you worry about?",
+    "Do you work well under pressure?",
+    "What's something you can't live without?",
+    "How do you cope with stress?",
+    "What is one of your greatest weaknesses and how do you compensate for that?",
+    "What frustrates you?",
+    "How do you respond to people you do not get along with?",
+    "If you became a minimalist, what would be the hardest thing to get rid of?",
+    "What is the one thing you are continually looking for (not something materialistic)",
+    "What do you value about yourself?",
+    "What drives you?",
+    "How often did your parents tell you they loved you and were proud of you growing up? Do they still tell you?",
+    "What's one of the greatest accomplishments you have achieved?",
+    "What is a smell that gives you PTSD?",
+    "What is one thing that you will always splurge on no matter how hard times get?",
+    "What is your favorite toy or Christmas gift from childhood?",
+    "What is the worst piece of advice you've ever received?",
+    "Would you rather be very intelligent with no common sense, or have ample common sense and no book smarts?",
+    "What animal do you think best embodies your personality and spirit",
+    "What item of your clothing has the best story behind it?",
+    "What is the last thing you laughed really hard at?",
+    "What creeps you out on a regular basis?",
+    "Who would you want to be stuck in an elevator with and why?",
+    "What's a bad habit you will never break?",
+    "Who was your first childhood crush?",
+    "When does closeness become a burden as opposed to a pleasure?",
+    "What are you afraid of?",
+    "What do you do when it rains?",
+    "How was the subject of death treated in your family growing up?",
+    "What is your regular order at Chick-fil-A?",
+    "What are you proud of, but never have an excuse to talk about?",
+    "What is a problem you've had in your life where someone else's help was very important to you?",
+    "Who is your best friend and how would you describe your friendship?",
+    "If you wanted me to sense exactly what it means to be you on a daily basis, what would you make me do?",
+    "What are some significant biases that you have?",
+    "How has your perspective changed in the last 5 years?",
+    "Why are you friends with me?",
+    "What do you sleep in?",
+    "What was the first song you downloaded on iTunes?",
+    "Do you think that someone can love another person fully if they don't love themselves?",
+    "If you were any aisle in the store, what would you be?",
+    "Do you want to be cremated or buried when you die?",
+    "Would you rather receive a phone call or a handwritten note?",
+    "What's your six word story for your life?",
+    "If you had a newspaper article written about your life, what would be the title?",
+    "What is your earliest memory?",
+    "What are three things you and I have in common?",
+    "Tell me something that made you happy today and something that made you mad or sad today.",
+    "What is a wish you're glad didn't come true?",
+    "When is the last time that you felt out of your comfort zone?",
+    "What was your first impression of me?",
+    "What words or phrases have others used to describe you?",
+    "Do you know the meaning of your name? How does it fit you?",
+    "Is there another name you would like to give yourself",
+    "What is your favorite nickname that you've ever had?",
+    "Are you the same person in public as you are in private?",
+    "If you knew success was a certainty, what would you do?",
+    "To date: what is the most impactful experience you have had?",
+    "What's the last thing that made you really mad?",
+    "What brings you life?",
+    "Who is someone who has made you the person you are today but has no idea of their impact?",
+    "Who inspires you the most and why?",
+    "If you could learn everything about one topic in a day, what would it be?",
+    "First kiss story",
+    "What's the nicest thing you've seen someone do for someone else?",
+    "What is one thing that has been heavy on your mind lately?",
+    "If you became president, what 3 things would you instantly want to change?",
+    "What makes you laugh?",
+    "If I told you that you had already peaked in your life, what would be the peak?",
+    "When is the last time you yelled at someone?",
+    "What is something you fear?",
+    "What is your favorite type of cheese?",
+    "If you got the opportunity to name a crayon, what would you name it and why?",
+    "If you could only eat one candy for the rest of your life, what would it be?",
+    "Would you rather someone be proud of what you are becoming or what you have become?",
+    "What song best describes your life right now?",
+    "Who is the person in your life you have the most complicated relationship with and why?",
+    "What causes you to change?",
+    "What have you changed your mind about in the last 5 years?",
+    "What is something that overwhelms you?",
+    "What books have had the most impact on your life?",
+    "What life lesson do you wish everyone was taught in school?",
+    "Do you believe miracles are possible?",
+    "What are the 3 most important qualities that you bring to the table in any relationship?",
+    "What is the biggest thing you've been praying for lately?",
+    "Who in your life are you most similar to?",
+    "Where did you fail today / how did you stretch yourself today?",
+    "Who provides you with the most consistent wisdom in your life?",
+    "What does being vulnerable mean to you?",
+    "What kind of proposal do you dream about?",
+    "How do you want to be remembered?",
+    "What is your most on-brand childhood story?",
+    "What title would you give this chapter in your life?",
+    "What is your mantra?",
+    "Would you like you if you met you?",
+    "What were the fundamental beliefs that defined you growing up?",
+    "If you could only have potatoes one way for the rest of your life, how would you have them?",
+    "What 3 things are you thankful for today?",
+    "What is your least favorite vegetable?",
+    "If you had a podcast, what would you talk about?",
+    "What is the best thing that someone could say to you?",
+    "Would you always tell the truth even if it would hurt the person you were telling it to?",
+    "What is a deal breaker for you when it comes to friendship?",
+    "How do you think you are viewed by other people? Is this how you want to be viewed?",
+    "If you wrote a book, what would you write about?",
+    "When is the last time you tried something for the first time? What was it?",
+    "What's your struggle?",
+    "Do you feel that you own your story or does your story own you?",
+    "If you had a boat, what would you name it?",
+    "What is your shameless plug?",
+    "What did you think you were gonna be when you grew up?",
+    "What is the last movie that you watched?",
+    "What has your faith journey looked like in your life?",
+    "Are you lying to yourself about anything?",
+    "What do you think my superpower is?",
+    "What is the most valuable lesson your mother has taught you?",
+    "What is the most valuable lesson your father has taught you?",
+    "What are you trying to prove to yourself?",
+    "What have you been taking for granted lately?",
+    "What about yourself is hardest to admit?",
+    "If skill and money didn't matter, what would be your dream job?",
+    "If you could have one plastic surgery, what would you get?",
+    "Who is someone who expects you to be someone?",
+    "What is making you happy right now?",
+    "What was your favorite Disney channel show growing up?",
+    "Were you ever spanked as a child?",
+    "What is something you admired from your parents that you want to do when you are a parent?",
+    "What is something your parents did growing up that you want to do differently with your own kids?",
+    "What was your favorite college tradition?",
+    "What's the hardest question that you have ever been asked?",
+    "Do you / have you ever smoked anything?",
+    "When is the last time you prayed?",
+    "What's your favorite song lyric that you can think of off the top of your head?",
+    "How much TV do you watch in a day?",
+    "What temperature do you put the thermostat on before you sleep?",
+    "What is a favorite thing of yours?",
+    "Do you consider yourself a homebody?",
+    "What is your go-to karaoke song?",
+    "If you were a tree, what kind of tree would you be?",
+    "What's a hill that you're willing to die on?"
+  ];
+
+  let people = JSON.parse(localStorage.getItem('happyhour_people') || '[]');
+  let currentQuestion = '';
+
+  function save() {
+    localStorage.setItem('happyhour_people', JSON.stringify(people));
+  }
+
+  function randomQuestion() {
+    const q = QUESTIONS[Math.floor(Math.random() * QUESTIONS.length)];
+    return q;
+  }
+
+  function render() {
+    const list = document.getElementById('people-list');
+    const empty = document.getElementById('empty-state');
+    const label = document.getElementById('list-label');
+    const countEl = document.getElementById('count');
+
+    countEl.textContent = people.length;
+
+    if (people.length === 0) {
+      empty.style.display = 'block';
+      label.style.display = 'none';
+      list.innerHTML = '';
+      return;
+    }
+
+    empty.style.display = 'none';
+    label.style.display = 'block';
+
+    list.innerHTML = people.slice().reverse().map((p, i) => {
+      const realIndex = people.length - 1 - i;
+      return `
+        <div class="person-card">
+          <div class="card-header">
+            <div>
+              <div class="name">${esc(p.name)}</div>
+              <div class="project">${esc(p.project)}</div>
+            </div>
+            <span class="level-badge">${esc(p.level)}</span>
+          </div>
+          <div class="question-block">
+            <div class="question-label">Question Asked</div>
+            <div class="question-text">"${esc(p.question)}"</div>
+            <div class="answer-text">${esc(p.answer)}</div>
+          </div>
+          <div class="card-actions">
+            <button class="delete-btn" onclick="deletePerson(${realIndex})">Remove</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  }
+
+  function esc(str) {
+    return String(str || '')
+      .replace(/&/g, '&amp;')
+      .replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;')
+      .replace(/"/g, '&quot;');
+  }
+
+  function deletePerson(index) {
+    if (confirm('Remove this person from your list?')) {
+      people.splice(index, 1);
+      save();
+      render();
+    }
+  }
+
+  function openModal() {
+    currentQuestion = randomQuestion();
+    document.getElementById('current-question').textContent = currentQuestion;
+    document.getElementById('input-name').value = '';
+    document.getElementById('input-level').value = '';
+    document.getElementById('input-project').value = '';
+    document.getElementById('input-answer').value = '';
+    document.getElementById('modal-overlay').classList.add('open');
+    setTimeout(() => document.getElementById('input-name').focus(), 300);
+  }
+
+  function closeModal() {
+    document.getElementById('modal-overlay').classList.remove('open');
+  }
+
+  document.getElementById('add-btn').addEventListener('click', openModal);
+  document.getElementById('cancel-btn').addEventListener('click', closeModal);
+
+  document.getElementById('reroll-btn').addEventListener('click', () => {
+    currentQuestion = randomQuestion();
+    document.getElementById('current-question').textContent = currentQuestion;
+  });
+
+  document.getElementById('modal-overlay').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('modal-overlay')) closeModal();
+  });
+
+  document.getElementById('save-btn').addEventListener('click', () => {
+    const name = document.getElementById('input-name').value.trim();
+    const level = document.getElementById('input-level').value.trim();
+    const project = document.getElementById('input-project').value.trim();
+    const answer = document.getElementById('input-answer').value.trim();
+
+    if (!name) {
+      document.getElementById('input-name').focus();
+      document.getElementById('input-name').style.borderColor = '#e74c3c';
+      setTimeout(() => document.getElementById('input-name').style.borderColor = '', 2000);
+      return;
+    }
+
+    people.push({ name, level, project, question: currentQuestion, answer, ts: Date.now() });
+    save();
+    render();
+    closeModal();
+  });
+
+  render();
+</script>
+</body>
+</html>
